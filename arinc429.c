@@ -19,7 +19,27 @@
 #include <linux/spi/spi.h>
 #include <asm/irq.h>
 #include <linux/module.h>
+unsigned  is_suspended:1;
 
+static int arinc429_suspend(struct spi_device *spi,pm_message_t message)
+{
+	struct arinc429  *arinc=dev_get_drvdata(&spi->dev);
+	spin_lock(&arinc->lock);
+	arinc->is_suspended=1;
+	arinc429_disable(arinc);
+	spin_unlock(&arinc->lock);	
+
+} 
+
+static int arinc429_resume(struct spi_device *spi)
+{
+	struct arinc429 *arinc=dev_get_drvdata(&spi->dev);
+	spin_lock(&arinc->lock);
+	arinc->is_suspended=0;
+	arinc429_enable(arinc);
+	spin_unlock(&arinc->lock);
+	
+}
 static int __devinit arinc429_probe(struct spi_device *spi)
 {	
 	struct arinc429 		 *arinc;
@@ -51,8 +71,8 @@ static struct spi_driver arinc429_driver={
 	},	
 		.probe=arinc429_probe,
 		.remove=__devexit_p(arinc429_remove),
-		.suspend=arinc429_suspend,/* do we need this? */
-		.resume=arinc429_resume,/* do we need this? */
+		.suspend=arinc429_suspend,
+		.resume=arinc429_resume,
 		
 };
 
